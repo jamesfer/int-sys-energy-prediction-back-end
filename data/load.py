@@ -1,10 +1,10 @@
 import csv
 
 
-def read(filename, map=lambda x: x):
+def read(filename, map=lambda x: x, filter=lambda x: True):
     """ Opens a csv file and reads it into a dictionary """
     with open(filename, mode='r', newline='') as infile:
-        return read_from(infile, map=map)
+        return read_from(infile, map=map, filter=filter)
 
 
 def write(filename, rows, fields):
@@ -13,10 +13,10 @@ def write(filename, rows, fields):
         write_to(outfile, rows, fields)
 
 
-def read_from(infile, map=lambda x: x):
+def read_from(infile, map=lambda x: x, filter=lambda x: True):
     """ Reads a csv file into a dictionary """
     reader = csv.DictReader(infile)
-    return [map(row) for row in reader]
+    return [map(row) for row in reader if filter(row)]
 
 
 def write_to(outfile, rows, fields):
