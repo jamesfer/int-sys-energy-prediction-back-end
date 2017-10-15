@@ -1,16 +1,15 @@
 from .load import read
 
-hourly_data_file = './normalized_files/hourly.csv'
+hourly_data_file = './data/normalized_files/hourly.csv'
 
 
 def hourly_data_for(country):
-    data = read(hourly_data_file, filter=lambda row: row['country'] == country)
-    data.pop('country', None)
-    data.pop('repr', None)
-    return data
+    data = read(hourly_data_file,
+                filter=lambda row: row['country'] == country)
+    return data[0]
 
 
-def get_raw_data(interval, country):
+def get_data_row(interval, country):
     if interval == 'hourly':
         return hourly_data_for(country)
     elif interval == 'daily':
