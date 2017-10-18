@@ -1,5 +1,5 @@
 import json
-from flask import Flask, request
+from flask import Flask, request, jsonify
 
 from ann.predict import predict
 from data import get_data_row, data_only
@@ -15,7 +15,7 @@ def index():
     # Load parameters
     country = args['country'] if 'country' in args else 'ALL'
     interval = args['interval'] if 'interval' in args else 'hourly'
-    lookback = args['lookback'] if 'lookback' in args else 5
+    lookback = int(args['lookback']) if 'lookback' in args else 5
     start = args['start'] if 'start' in args else '2015'
     end = args['end'] if 'end' in args else '2016'
 
@@ -38,8 +38,12 @@ def index():
                       pred_inputs)
     flat_results = [res[0] for res in results]
 
-    actual_outputs = denormalize(flat_results, low, high)
+    predicted_outputs = denormalize(flat_results, low, high)
     expected_outputs = denormalize(expected_outputs.flatten(), low, high)
-    return json.dumps(dict(keys=expected_keys.tolist(),
-                           actual=actual_outputs,
-                           expected=expected_outputs))
+
+    resp = jsonify(dict(keys=expected_keys.tolist(),
+                        predicted=predicted_outputs,
+                        expected=expected_outputs))
+    resp.status_code = 200
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    return resp
