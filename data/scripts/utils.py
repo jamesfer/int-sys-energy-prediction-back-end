@@ -11,10 +11,10 @@ def lower_keys(row):
     return {k.lower(): v for k, v in row.items()}
 
 
-def int_values(row):
+def num_values(row):
     """ Converts all values to integers if they're not None """
     return skip_keys(['country'], row,
-                     lambda r: {k: int(v) if v is not None else None
+                     lambda r: {k: float(v) if v is not None else None
                                 for k, v in r.items() if k != 'country'})
 
 
@@ -28,26 +28,23 @@ def clean_value(value):
     return value if value not in ['', '0', 'n.a.'] else None
 
 
-def inline_date(row):
-    """ Adds the year, month and date of the row to each key in data """
-    ignore_cols = ['country', 'year', 'month', 'day']
-    date_str = '%s-%s-%s ' % (row['year'], row['month'], row['day'])
+def strip_cols(row, do_inline_date):
+    """ Strips all columns from the row that are not needed """
+    ignore_cols = ['country', 'year', 'month', 'day', 'sum', 'repr']
+    if do_inline_date:
+        date_str = '%s/%s/%s ' % (row['year'], row['month'], row['day'])
+    else:
+        date_str = ''
     data = {date_str + k: v for k, v in row.items() if k not in ignore_cols}
     return dict(country=row['country'], **data)
 
 
-def strip_cols(row):
-    """ Strips all columns from the row that are not needed """
-    return {k: v for k, v in row.items()
-            if k not in ['repr']}
-
-
 def normalize_and_inline(row):
-    return int_values(inline_date(strip_cols(clean(lower_keys(strip(row))))))
+    return num_values(strip_cols(clean(lower_keys(strip(row)))))
 
 
 def normalize(row, do_inline_date):
-    return int_values(strip_cols(clean(lower_keys(strip(row)))))
+    return num_values(strip_cols(clean(lower_keys(strip(row))), do_inline_date))
 
 
 def skip_keys(keys, d, action):
@@ -84,7 +81,7 @@ def group_collections(key, *collections, merge=lambda a, b: b):
 
 
 def merge_rows(row_a, row_b):
-    return merge_dicts(row_a, row_b, merge=lambda a, b: (a + b) / 2,
+    return merge_dicts(row_a, row_b, merge=average_of,
                        exclude=['country'])
 
 
@@ -92,10 +89,8 @@ def compress_row_collections(total_rows, new_rows):
     return group_collections('country', total_rows, new_rows, merge=merge_rows)
 
 
-def average_of(a, b):
-    if a is None or b is None:
-        return None
-    return (a + b) / 2
+def average_of(*nums):
+    return sum([0 if num is None else num for num in nums]) / 2
 
 
 def find_average_row(all_rows):
@@ -104,15 +99,19 @@ def find_average_row(all_rows):
 
 
 def get_all_keys(all_rows):
-    return {key for row in all_rows for key in row.keys()}
+    keys = list({key for row in all_rows for key in row.keys()})
+    keys.sort()
+    keys.pop()
+    keys.insert(0, 'country')
+    return keys
 
 
 def process_files(files, do_inline_date):
     all_rows = []
-    map_func = normalize_and_inline if do_inline_date else normalize
+    # map_func = normalize_and_inline if do_inline_date else normalize
     for filename in files:
         new_rows = read(filename)
-        new_rows = map(map_func, new_rows)
+        new_rows = map(lambda row: normalize(row, do_inline_date), new_rows)
         all_rows = compress_row_collections(all_rows, new_rows)
 
     all_rows = list(all_rows)
