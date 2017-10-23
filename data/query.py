@@ -16,7 +16,7 @@ def get_data_row(interval, country):
     if interval == 'hourly':
         return data_for(hourly_data_file, country)
     elif interval == 'monthly':
-        return data_for
+        return data_for(monthly_data_file, country)
     raise Exception('Invalid interval')
 
 
@@ -24,5 +24,5 @@ def get_compressed_data(interval, country):
     if interval == 'hourly':
         return data_for(compressed_hourly_data_file, country)
     elif interval == 'monthly':
-        raise Exception('Monthly interval not yet supported')
+        return data_for(compressed_monthly_data_file, country)
     raise Exception('Invalid interval')

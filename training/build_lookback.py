@@ -14,8 +14,8 @@ def build_lookback_set(data_set, start, end, lookback):
     exp_outputs, train_outputs = all_outputs
 
     return dict(
-        training_inputs=np.array(train_inputs),
-        training_outputs=np.array(train_outputs),
+        training_inputs=np.array(inputs),
+        training_outputs=np.array(outputs),
         expected_keys=np.array(exp_keys),
         expected_outputs=np.array(exp_outputs),
         pred_inputs=np.array(pred_inputs),

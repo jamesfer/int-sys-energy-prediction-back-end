@@ -25,6 +25,12 @@ def index():
     low = training_set['low']
     high = training_set['high']
 
+    if len(training_inputs) == 0 or len(pred_inputs) == 0:
+        resp = jsonify({'error': 'No data available for that range.'})
+        resp.status_code = 400
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return resp
+
     # Run predictions
     results = predict(settings['lookback'] or 1,
                       training_inputs,
