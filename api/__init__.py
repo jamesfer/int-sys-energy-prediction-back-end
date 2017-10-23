@@ -1,27 +1,21 @@
-import json
 from flask import Flask, request, jsonify
 
 from ann.predict import predict
 from data import get_data_row, data_only
-from training.build import build_training_set, denormalize
+from data.query import get_compressed_data
+from training.build import build_set
+from training.build_lookback import build_lookback_set, denormalize
 
 app = Flask(__name__)
 
 
 @app.route('/')
 def index():
-    args = request.args
+    settings = get_settings()
+    print(settings)
 
-    # Load parameters
-    country = args['country'] if 'country' in args else 'ALL'
-    interval = args['interval'] if 'interval' in args else 'hourly'
-    lookback = int(args['lookback']) if 'lookback' in args else 5
-    start = args['start'] if 'start' in args else '2015'
-    end = args['end'] if 'end' in args else '2016'
-
-    # Build training set
-    data = data_only(get_data_row(interval, country))
-    training_set = build_training_set(data, start, end, lookback)
+    data = get_data(settings)
+    training_set = get_training_set(settings, data)
 
     expected_outputs = training_set['expected_outputs']
     training_inputs = training_set['training_inputs']
@@ -32,7 +26,7 @@ def index():
     high = training_set['high']
 
     # Run predictions
-    results = predict(lookback,
+    results = predict(settings['lookback'] or 1,
                       training_inputs,
                       training_outputs,
                       pred_inputs)
@@ -47,3 +41,78 @@ def index():
     resp.status_code = 200
     resp.headers['Access-Control-Allow-Origin'] = '*'
     return resp
+
+
+def get_settings():
+    args = request.args
+
+    lookback = args.get('lookback', None)
+    if lookback == 'null':
+        lookback = None
+    else:
+        lookback = int(lookback)
+
+    if lookback is None:
+        compressed = True
+    else:
+        compressed = args.get('compressed', True)
+    if compressed == 'true':
+        compressed = True
+    elif compressed == 'false':
+        compressed = False
+
+    return dict(country=(args.get('country', 'ALL')),
+                interval=(args.get('interval', 'hourly')),
+                start=(args.get('start', '2015')),
+                end=(args.get('end', '2016')),
+                compressed=compressed,
+                lookback=lookback)
+
+
+def get_data(settings):
+    if settings['compressed']:
+        data = get_compressed_data(settings['interval'], settings['country'])
+    else:
+        data = get_data_row(settings['interval'], settings['country'])
+    return data_only(data)
+
+
+def get_training_set(settings, data):
+    if settings['lookback'] is not None:
+        training_set = build_lookback_set(data, settings['start'], settings['end'], settings['lookback'])
+    else:
+        if settings['interval'] == 'hourly':
+            if settings['compressed']:
+                format_func = format_hours
+            else:
+                format_func = format_date
+        else:
+            format_func = lambda x: x
+        training_set = build_set(data, settings['start'], settings['end'], format_func)
+    return training_set
+
+
+def date_to_num(date):
+    first_sep = date.index('/')
+    second_sep = date.index('/', first_sep + 1)
+
+    year = date[:first_sep]
+    month = date[first_sep + 1:second_sep]
+    day = date[second_sep + 1:-9]
+    hour = date[-8:-6]
+    return float(year) * 365 \
+           + float(month) * 31 \
+           + float(day) \
+           + float(hour) / 24.0
+
+
+min_hourly_date = date_to_num('2010/1/20 01:00:00')
+max_hourly_date = date_to_num('2016/5/18 24:00:00')
+
+
+def format_date(k):
+    return str((date_to_num(k) - min_hourly_date) / (max_hourly_date - min_hourly_date))
+
+
+def format_hours(k):
+    return str(int(k[:2]) / 24.0)

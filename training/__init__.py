@@ -1,1 +1,1 @@
-from .build import build_training_set
+from .build_lookback import build_lookback_set

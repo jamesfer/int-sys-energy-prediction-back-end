@@ -11,5 +11,4 @@ def merge_by(prop, *arrs, merge=lambda a, b: b):
 
 def data_only(row):
     del row['country']
-    del row['repr']
     return row

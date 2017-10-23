@@ -1,19 +1,26 @@
 from .load import read
 
 hourly_data_file = './data/normalized_files/hourly.csv'
+compressed_hourly_data_file = './data/normalized_files/hourly_compressed.csv'
 
 
-def hourly_data_for(country):
-    data = read(hourly_data_file,
+def data_for(file, country):
+    data = read(file,
                 filter=lambda row: row['country'] == country)
     return data[0]
 
 
 def get_data_row(interval, country):
     if interval == 'hourly':
-        return hourly_data_for(country)
-    elif interval == 'daily':
-        raise Exception('Daily interval not yet supported')
+        return data_for(hourly_data_file, country)
+    elif interval == 'monthly':
+        raise Exception('Monthly interval not yet supported')
+    raise Exception('Invalid interval')
+
+
+def get_compressed_data(interval, country):
+    if interval == 'hourly':
+        return data_for(compressed_hourly_data_file, country)
     elif interval == 'monthly':
         raise Exception('Monthly interval not yet supported')
     raise Exception('Invalid interval')

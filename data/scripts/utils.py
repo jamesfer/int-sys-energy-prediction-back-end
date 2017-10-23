@@ -32,7 +32,7 @@ def strip_cols(row, do_inline_date):
     """ Strips all columns from the row that are not needed """
     ignore_cols = ['country', 'year', 'month', 'day', 'sum', 'repr']
     if do_inline_date:
-        date_str = '%s/%s/%s ' % (row['year'], row['month'], row['day'])
+        date_str = '{}/{:0>2}/{} '.format(row['year'], row['month'], row['day'])
     else:
         date_str = ''
     data = {date_str + k: v for k, v in row.items() if k not in ignore_cols}
@@ -95,7 +95,6 @@ def average_of(*nums):
 
 def find_average_row(all_rows):
     return merge_dicts(*all_rows, merge=average_of, exclude=['country'])
-    # return skip_keys(['country'], all_rows, lambda r: merge_dicts(r))
 
 
 def get_all_keys(all_rows):
@@ -106,12 +105,20 @@ def get_all_keys(all_rows):
     return keys
 
 
+# def map_keys(rows, func):
+#     return map(lambda row: skip_keys('country', row,
+#                                      lambda r: {func(k): v
+#                                                 for k, v in r.items()}),
+#                rows)
+
+
 def process_files(files, do_inline_date):
     all_rows = []
-    # map_func = normalize_and_inline if do_inline_date else normalize
     for filename in files:
         new_rows = read(filename)
         new_rows = map(lambda row: normalize(row, do_inline_date), new_rows)
+        # new_rows = map_keys(new_rows, format_key)
+
         all_rows = compress_row_collections(all_rows, new_rows)
 
     all_rows = list(all_rows)
