@@ -71,8 +71,6 @@ def group_collections(key, *collections, merge=lambda a, b: b):
     result = {}
     for arr in collections:
         for row in arr:
-            # print(row)
-            # print('\n\n\n\n')
             if row[key] in result:
                 result[row[key]] = merge(result[row[key]], row)
             else:
@@ -106,18 +104,23 @@ def get_all_keys(all_rows):
 
 
 # def map_keys(rows, func):
-#     return map(lambda row: skip_keys('country', row,
-#                                      lambda r: {func(k): v
-#                                                 for k, v in r.items()}),
-#                rows)
+#     # return map(lambda row: skip_keys('country', row,
+#     #                                  lambda r: {func(k): v
+#     #                                             for k, v in r.items()}),
+#     #            rows)
+#     # map(lambda row: print(row), rows)
+#     for i in rows:
+#         print(i)
+#     return []
 
 
-def process_files(files, do_inline_date):
+def process_files(files, do_inline_date, map_row=None):
     all_rows = []
     for filename in files:
         new_rows = read(filename)
         new_rows = map(lambda row: normalize(row, do_inline_date), new_rows)
-        # new_rows = map_keys(new_rows, format_key)
+        if map_row:
+            new_rows = map(map_row, new_rows)
 
         all_rows = compress_row_collections(all_rows, new_rows)
 
