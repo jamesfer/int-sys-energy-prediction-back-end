@@ -10,7 +10,7 @@ def predict(lookback, inputs, outputs, predictions):
 
     def predict_session(session):
         nonlocal results
-        for _ in range(10000):
+        for _ in range(30000):
             trainer.train(session, inputs, outputs)
         results = model.predict(session, predictions)
     run_session([model.biases, model.weights], predict_session)
