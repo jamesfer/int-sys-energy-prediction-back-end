@@ -1,5 +1,10 @@
 from flask import Flask, request, jsonify
 
+import tensorflow as tf
+
+import shutil # delete tmp directory
+import os.path
+
 from ann.predict import predict
 from data import get_data_row, data_only
 from data.query import get_compressed_data
@@ -8,11 +13,26 @@ from training.build_lookback import build_lookback_set, denormalize
 
 app = Flask(__name__)
 
+@app.route('/delete')
+def delete():
+
+    if os.path.exists('./tmp/'):
+        # remove folder and its contents
+        shutil.rmtree('./tmp', ignore_errors=False, onerror=None)
+    
+    # respond to client letting them know training data was deleted.
+    resp = jsonify({'status': 'completed'})
+    resp.status_code = 200
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    return resp
 
 @app.route('/')
 def index():
     settings = get_settings()
     print(settings)
+
+    # fixes name changes when saving/restoring model.
+    tf.reset_default_graph()
 
     data = get_data(settings)
     training_set = get_training_set(settings, data)
@@ -32,7 +52,8 @@ def index():
         return resp
 
     # Run predictions
-    results = predict(settings['lookback'] or 1,
+    results = predict(settings['train'],
+                      settings['lookback'] or 1,
                       training_inputs,
                       training_outputs,
                       pred_inputs)
@@ -51,6 +72,14 @@ def index():
 
 def get_settings():
     args = request.args
+
+    print(args.get("train"))
+
+    train = args.get("train")
+    if train == 'true':
+        train = True
+    elif train == 'false':
+        train = False
 
     lookback = args.get('lookback', None)
     if lookback == 'null':
@@ -72,7 +101,8 @@ def get_settings():
                 start=(args.get('start', '2015')),
                 end=(args.get('end', '2016')),
                 compressed=compressed,
-                lookback=lookback)
+                lookback=lookback,
+                train=train)
 
 
 def get_data(settings):
