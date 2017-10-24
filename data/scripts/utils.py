@@ -88,11 +88,17 @@ def compress_row_collections(total_rows, new_rows):
 
 
 def average_of(*nums):
-    return sum([0 if num is None else num for num in nums]) / 2
+    return sum_of(*nums) / len(nums)
+
+
+def sum_of(*nums):
+    return sum([0 if num is None else num for num in nums])
 
 
 def find_average_row(all_rows):
-    return merge_dicts(*all_rows, merge=average_of, exclude=['country'])
+    result = merge_dicts(*all_rows, merge=sum_of, exclude=['country'])
+    result['country'] = 'ALL'
+    return result
 
 
 def get_all_keys(all_rows):
@@ -101,17 +107,6 @@ def get_all_keys(all_rows):
     keys.pop()
     keys.insert(0, 'country')
     return keys
-
-
-# def map_keys(rows, func):
-#     # return map(lambda row: skip_keys('country', row,
-#     #                                  lambda r: {func(k): v
-#     #                                             for k, v in r.items()}),
-#     #            rows)
-#     # map(lambda row: print(row), rows)
-#     for i in rows:
-#         print(i)
-#     return []
 
 
 def process_files(files, do_inline_date, map_row=None):
