@@ -23,18 +23,18 @@ def run_session(var_list, cb):
 
 def modelExists(settings):
     filename = getFilename(settings)
-    return os.path.exists('./tmp/'+filename+'.ckpt.meta')
+    return os.path.exists('./models/'+filename+'.ckpt.meta')
 
 def saveModel(session, settings):
     filename = getFilename(settings)
     saver = tf.train.Saver()
-    save_path = saver.save(session, './tmp/'+filename+'.ckpt')
+    save_path = saver.save(session, './models/'+filename+'.ckpt')
     print("Model saved in file: %s" % save_path)
 
 def restoreModel(session, settings):
     filename = getFilename(settings)
     saver = tf.train.Saver()
-    saver.restore(session, './tmp/'+filename+'.ckpt')
+    saver.restore(session, './models/'+filename+'.ckpt')
 
 def getFilename(settings):
     return 'model-' + str(settings['country']) + '-' + str(settings['interval']) + '-' + str(settings['compressed']) + '-' + str(settings['lookback'])

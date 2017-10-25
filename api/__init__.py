@@ -17,12 +17,12 @@ app = Flask(__name__)
 @app.route('/delete')
 def delete():
 
-    if os.path.exists('./tmp/'):
+    if os.path.exists('./models/'):
         # remove folder and its contents
-        shutil.rmtree('./tmp', ignore_errors=False, onerror=None)
+        shutil.rmtree('./models', ignore_errors=False, onerror=None)
     
     # respond to client letting them know training data was deleted.
-    resp = jsonify({'status': 'completed'})
+    resp = jsonify({'status': 'deleted'})
     resp.status_code = 200
     resp.headers['Access-Control-Allow-Origin'] = '*'
     return resp
@@ -30,7 +30,6 @@ def delete():
 @app.route('/')
 def index():
     settings = get_settings()
-    # init the model with settings, this will setup the associated filename to load and save from.
     print(settings)
 
     # fixes name changes when saving/restoring model.
@@ -72,6 +71,7 @@ def index():
                         expected=expected_outputs,settings=settings,trained=trained))
     resp.status_code = 200
     resp.headers['Access-Control-Allow-Origin'] = '*'
+    print('responded to client!')
     return resp
 
 
