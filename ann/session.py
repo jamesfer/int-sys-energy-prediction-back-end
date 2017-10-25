@@ -2,6 +2,7 @@ from .tf import tf, VariableContainer
 import numpy as np
 import os.path
 
+settings = {}
 
 def flatten(var_list):
     return np.ravel([
@@ -13,18 +14,27 @@ def flatten(var_list):
 def run_session(var_list, cb):
     modelSaved = os.path.exists('./tmp/model.ckpt.meta')
     initializer = tf.variables_initializer(var_list)
-    print(var_list)
-    saver = tf.train.Saver()
-    print("model saved: %s" % modelSaved)
     with tf.Session() as session:
-        # restore saved model
-        if modelSaved:
-            result = saver.restore(session, './tmp/model.ckpt')
-        else:
-            session.run(initializer)
+        session.run(initializer)
         
-        print(session.run(var_list[0])) # prints biases
-        print(session.run(var_list[1])) # prints weights
-        
-
         cb(session)
+
+
+
+def modelExists(settings):
+    filename = getFilename(settings)
+    return os.path.exists('./tmp/'+filename+'.ckpt.meta')
+
+def saveModel(session, settings):
+    filename = getFilename(settings)
+    saver = tf.train.Saver()
+    save_path = saver.save(session, './tmp/'+filename+'.ckpt')
+    print("Model saved in file: %s" % save_path)
+
+def restoreModel(session, settings):
+    filename = getFilename(settings)
+    saver = tf.train.Saver()
+    saver.restore(session, './tmp/'+filename+'.ckpt')
+
+def getFilename(settings):
+    return 'model-' + str(settings['country']) + '-' + str(settings['interval']) + '-' + str(settings['compressed']) + '-' + str(settings['lookback'])

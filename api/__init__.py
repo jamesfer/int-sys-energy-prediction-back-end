@@ -6,6 +6,7 @@ import shutil # delete tmp directory
 import os.path
 
 from ann.predict import predict
+from ann.session import modelExists
 from data import get_data_row, data_only
 from data.query import get_compressed_data
 from training.build import build_set
@@ -29,6 +30,7 @@ def delete():
 @app.route('/')
 def index():
     settings = get_settings()
+    # init the model with settings, this will setup the associated filename to load and save from.
     print(settings)
 
     # fixes name changes when saving/restoring model.
@@ -56,15 +58,18 @@ def index():
                       settings['lookback'] or 1,
                       training_inputs,
                       training_outputs,
-                      pred_inputs)
+                      pred_inputs, settings)
     flat_results = [res[0] for res in results]
 
     predicted_outputs = denormalize(flat_results, low, high)
     expected_outputs = denormalize(expected_outputs.flatten(), low, high)
 
+    # tells the client if the result came from a trained or untrained model.
+    trained = modelExists(settings)
+
     resp = jsonify(dict(keys=expected_keys.tolist(),
                         predicted=predicted_outputs,
-                        expected=expected_outputs,settings=settings))
+                        expected=expected_outputs,settings=settings,trained=trained))
     resp.status_code = 200
     resp.headers['Access-Control-Allow-Origin'] = '*'
     return resp
@@ -72,8 +77,6 @@ def index():
 
 def get_settings():
     args = request.args
-
-    print(args.get("train"))
 
     train = args.get("train")
     if train == 'true':
