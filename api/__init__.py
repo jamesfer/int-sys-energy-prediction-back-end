@@ -64,7 +64,7 @@ def index():
 
     resp = jsonify(dict(keys=expected_keys.tolist(),
                         predicted=predicted_outputs,
-                        expected=expected_outputs))
+                        expected=expected_outputs,settings=settings))
     resp.status_code = 200
     resp.headers['Access-Control-Allow-Origin'] = '*'
     return resp
