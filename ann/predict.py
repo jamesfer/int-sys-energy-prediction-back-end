@@ -6,6 +6,8 @@ import os.path
 
 import tensorflow as tf
 
+# inputs = input values to train model
+# outputs = expected/goal values to train model
 def predict(train, lookback, inputs, outputs, predictions, settings):
     model = SimpleModel(lookback, 1)
     trainer = GradientDescentTrainer(model)

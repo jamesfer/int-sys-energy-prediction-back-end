@@ -1,7 +1,9 @@
 from flask import Flask, request, jsonify
 
 import tensorflow as tf
-
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
 import shutil # delete tmp directory
 import os.path
 
@@ -38,11 +40,22 @@ def index():
     data = get_data(settings)
     training_set = get_training_set(settings, data)
 
-    expected_outputs = training_set['expected_outputs']
     training_inputs = training_set['training_inputs']
+    # print('\ntraining_inputs')
+    # print(training_inputs)
     training_outputs = training_set['training_outputs']
+    # print('\ntraining_outputs')
+    # print(training_outputs)
     pred_inputs = training_set['pred_inputs']
+    # print('\nprediction_inputs')
+    # print(pred_inputs)
     expected_keys = training_set['expected_keys']
+    # print('\nexpected_keys')
+    # print(expected_keys)
+    expected_outputs = training_set['expected_outputs']
+    # print('\nexpected_outputs')
+    # print(expected_outputs)
+
     low = training_set['low']
     high = training_set['high']
 
@@ -53,6 +66,30 @@ def index():
         return resp
 
     # Run predictions
+
+    ### Variable Descriptions ###
+    ## Training ##
+    # training_inputs = input values fed into the trainer = X_data > X_train
+    # training_outputs = expected/goal values fed into the trainer = Y_val > Y_train
+    ## Predictions ##
+    # pred_inputs = input values fed into the prediction model
+    # predicted_outputs = output values from the prediction
+
+    ### TRAIN TEST SPLIT ###
+    # settings['tts'] = boolean which indicates if client wants to train test split
+    # randomises training data and testing data with a test size of 30%, data is shuffled
+    # not feeding the same training data each time. 
+    # not testing the model with same training data each time
+    X_train, X_test, Y_train, Y_test = train_test_split(training_inputs, training_outputs, test_size=0.3, shuffle=True)
+
+
+    if settings['tts']==True:
+        # assign split train data
+        training_inputs = X_train
+        training_outputs = Y_train
+    
+
+    # PREDICTION
     results = predict(settings['train'],
                       settings['lookback'] or 1,
                       training_inputs,
@@ -60,15 +97,20 @@ def index():
                       pred_inputs, settings)
     flat_results = [res[0] for res in results]
 
+
     predicted_outputs = denormalize(flat_results, low, high)
     expected_outputs = denormalize(expected_outputs.flatten(), low, high)
+
+    # error mean squared for the prediction
+    ems = mean_squared_error(expected_outputs, predicted_outputs)
 
     # tells the client if the result came from a trained or untrained model.
     trained = modelExists(settings)
 
     resp = jsonify(dict(keys=expected_keys.tolist(),
                         predicted=predicted_outputs,
-                        expected=expected_outputs,settings=settings,trained=trained))
+                        expected=expected_outputs,settings=settings,trained=trained,
+                        ems=ems))
     resp.status_code = 200
     resp.headers['Access-Control-Allow-Origin'] = '*'
     print('responded to client!')
@@ -83,6 +125,13 @@ def get_settings():
         train = True
     elif train == 'false':
         train = False
+    
+
+    tts = args.get("tts")
+    if tts == 'true':
+        tts = True
+    elif tts == 'false':
+        tts = False
 
     lookback = args.get('lookback', None)
     if lookback == 'null':
@@ -105,7 +154,7 @@ def get_settings():
                 end=(args.get('end', '2016')),
                 compressed=compressed,
                 lookback=lookback,
-                train=train)
+                train=train, tts=tts)
 
 
 def get_data(settings):
