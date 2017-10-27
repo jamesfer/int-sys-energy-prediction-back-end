@@ -7,11 +7,11 @@ from sklearn.metrics import mean_squared_error
 import shutil # delete tmp directory
 import os.path
 
-from ann.predict import predict
+from ann.predict import predict, predict_future
 from ann.session import modelExists
 from data import get_data_row, data_only
 from data.query import get_compressed_data
-from training.build import build_set
+from training.build import build_set, build_future_set
 from training.build_lookback import build_lookback_set, denormalize
 
 app = Flask(__name__)
@@ -56,6 +56,7 @@ def index():
     # print('\nexpected_outputs')
     # print(expected_outputs)
 
+    #flipped
     low = training_set['low']
     high = training_set['high']
 
@@ -89,7 +90,8 @@ def index():
         training_outputs = Y_train
     
 
-    # PREDICTION
+    # HISTORICAL PREDICTION
+    
     results = predict(settings['train'],
                       settings['lookback'] or 1,
                       training_inputs,
@@ -97,23 +99,38 @@ def index():
                       pred_inputs, settings)
     flat_results = [res[0] for res in results]
 
+    predicted_outputs = denormalize(flat_results, high, low)
+    expected_outputs = denormalize(expected_outputs.flatten(), high, low)
 
-    predicted_outputs = denormalize(flat_results, low, high)
-    expected_outputs = denormalize(expected_outputs.flatten(), low, high)
-
+    
     # error mean squared for the prediction
     ems = mean_squared_error(expected_outputs, predicted_outputs)
 
     # tells the client if the result came from a trained or untrained model.
     trained = modelExists(settings)
-
-    resp = jsonify(dict(keys=expected_keys.tolist(),
+    if settings['future']==True:
+        tf.reset_default_graph()
+        # FUTURE PREDICTION
+        # get future prediction inputs
+        
+        future_inputs = get_future_inputs(settings=settings)
+        future_input_values = future_inputs['future_pred_input_values']
+        results_future = predict_future(lookback=settings['lookback'] or 1, predictions=future_input_values, settings=settings)
+        flat_results_future = [res[0] for res in results]
+        predicted_future_outputs = denormalize(flat_results_future, high, low)
+        predicted_future_keys = future_inputs['future_pred_input_keys']
+        resp = jsonify(dict(keys=predicted_future_keys.tolist(),
+                        predicted=predicted_future_outputs,settings=settings,trained=trained,
+                        ems=ems))
+    else:
+        resp = jsonify(dict(keys=expected_keys.tolist(),
                         predicted=predicted_outputs,
                         expected=expected_outputs,settings=settings,trained=trained,
                         ems=ems))
+    
     resp.status_code = 200
     resp.headers['Access-Control-Allow-Origin'] = '*'
-    print('responded to client!')
+    print('Data returned to client!')
     return resp
 
 
@@ -125,6 +142,14 @@ def get_settings():
         train = True
     elif train == 'false':
         train = False
+
+    future = args.get("future")
+    if future == 'true':
+        future = True
+    elif future == 'false':
+        future = False
+
+    futureFromHours = args.get("futureFromHours")
     
 
     tts = args.get("tts")
@@ -154,7 +179,7 @@ def get_settings():
                 end=(args.get('end', '2016')),
                 compressed=compressed,
                 lookback=lookback,
-                train=train, tts=tts)
+                train=train, tts=tts, future=future, futureFromHours=futureFromHours)
 
 
 def get_data(settings):
@@ -179,6 +204,16 @@ def get_training_set(settings, data):
         training_set = build_set(data, settings['start'], settings['end'], format_func)
     return training_set
 
+def get_future_inputs(settings):
+    # can only predict future for non compressed
+    if settings['compressed']!=True:
+        # lookback window cannot be None
+        print(settings)
+        future_inputs = build_future_set(settings)
+        
+    
+    return future_inputs
+
 
 def date_to_num(date):
     first_sep = date.index('/')
@@ -199,6 +234,7 @@ max_hourly_date = date_to_num('2016/5/18 24:00:00')
 
 
 def format_date(k):
+    print(date_to_num(k))
     return str((date_to_num(k) - min_hourly_date) / (max_hourly_date - min_hourly_date))
 
 

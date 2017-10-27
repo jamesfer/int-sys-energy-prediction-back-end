@@ -29,12 +29,36 @@ def predict(train, lookback, inputs, outputs, predictions, settings):
             for _ in range(30000):
                 trainer.train(session, inputs, outputs)
         
-        print(session.run(model.biases)) # prints biases
-        print(session.run(model.weights)) # prints weights
+        # print(session.run(model.biases)) # prints biases
+        # print(session.run(model.weights)) # prints weights
 
         # save model to file
         if train:
             saveModel(session,settings)
+        
+        results = model.predict(session, predictions)
+        
+    run_session([model.biases, model.weights], predict_session)
+    return results.tolist()
+
+def predict_future(lookback, predictions, settings):
+    model = SimpleModel(lookback, 1)
+    trainer = GradientDescentTrainer(model)
+    results = None
+
+    def predict_session(session):
+        nonlocal results
+
+        modelSaved = modelExists(settings)
+
+        if modelSaved:
+            print("model is saved, restoring model!")
+            restoreModel(session, settings)
+        else:
+            print("model is not saved, not restored!")
+        
+        #print(session.run(model.biases)) # prints biases
+        #print(session.run(model.weights)) # prints weights
         
         results = model.predict(session, predictions)
         
